@@ -1,0 +1,35 @@
+name: epaflix patched image
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath \
+            -ldflags "-s -w -X github.com/jon4hz/jellysweep/internal/version.Version=0.16.0-pr430 -X github.com/jon4hz/jellysweep/internal/version.Commit=${GITHUB_SHA::7} -X github.com/jon4hz/jellysweep/internal/version.BuiltBy=epaflix" \
+            -o linux/amd64/jellysweep .
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: release.Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ghcr.io/spyrospsarras/jellysweep:pr-430
+      - run: echo "ghcr.io/spyrospsarras/jellysweep:pr-430@${{ steps.build.outputs.digest }}"
