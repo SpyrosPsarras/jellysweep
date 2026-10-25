@@ -323,12 +323,16 @@ func (c *Client) FindCollectionByName(ctx context.Context, name string) (string,
 	return "", nil // Collection not found
 }
 
-// GetCollectionItems returns a map of item IDs currently in the collection.
+// GetCollectionItems returns the IDs of the Movie and Series members of the collection.
 func (c *Client) GetCollectionItems(ctx context.Context, collectionID string) (map[string]bool, error) {
 	// Get items in the collection
 	result, resp, err := c.jellyfin.LibraryAPI.GetItems(ctx).
 		ParentId(collectionID).
 		Recursive(true).
+		IncludeItemTypes([]jellyfin.BaseItemKind{
+			jellyfin.BASEITEMKIND_MOVIE,
+			jellyfin.BASEITEMKIND_SERIES,
+		}).
 		Execute()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get collection items: %w", err)

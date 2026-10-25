@@ -298,6 +298,24 @@ func TestCollections(t *testing.T) {
 	require.Equal(t, []string{"m1"}, removes[0].Query["ids"])
 }
 
+func TestGetCollectionItemsRequestsMoviesAndSeries(t *testing.T) {
+	c, server := newTestClient(t)
+	server.JSON("GET /Items", queryResult([]jellyfinAPI.BaseItemDto{
+		item("m1", "Movie 1", jellyfinAPI.BASEITEMKIND_MOVIE),
+		item("s1", "Series 1", jellyfinAPI.BASEITEMKIND_SERIES),
+	}, 2))
+
+	items, err := c.GetCollectionItems(t.Context(), "col-1")
+	require.NoError(t, err)
+	require.Equal(t, map[string]bool{"m1": true, "s1": true}, items)
+
+	itemCalls := server.Requests(http.MethodGet, "/Items")
+	require.Len(t, itemCalls, 1)
+	require.Equal(t, "col-1", itemCalls[0].Query.Get("parentId"))
+	require.Equal(t, "true", itemCalls[0].Query.Get("recursive"))
+	require.ElementsMatch(t, []string{"Movie", "Series"}, itemCalls[0].Query["includeItemTypes"])
+}
+
 func TestCreateCollectionBatchesLargeItemLists(t *testing.T) {
 	c, server := newTestClient(t)
 	created := jellyfinAPI.NewCollectionCreationResult()
